@@ -1,4 +1,5 @@
 import socket  # noqa: F401
+import threading
 
 SUCCESSFUL_OK_RESPONSE = 'HTTP/1.1 200 OK\r\n'
 CLIENT_ERROR_NOT_FOUND = 'HTTP/1.1 404 Not Found\r\n'
@@ -26,27 +27,28 @@ def verify_endpoint(request_data):
 
     return CLIENT_ERROR_NOT_FOUND + '\r\n'
 
+def handle_request(client):
+    data_from_request = client.recv(4096)
+    decoded_data = data_from_request.decode().split('\r\n')
+    request_data = {'Request line': decoded_data[0].split(' ')}
+    decoded_data.pop(0)
+    for request_content in decoded_data:
+        section = request_content.split(': ')
+        if section[0] != '':
+            request_data[section[0]] = section[1]
+    response = verify_endpoint(request_data)
+    client.send(response.encode())
+    client.close()
+
 def main():
     print("Logs from your program will appear here!")
     server_socket = socket.create_server(("localhost", 4221))
     server_socket.listen()
-
     while True:
         conn, addr = server_socket.accept()
-        print(f'Connection from {addr}')
-        data_from_request = conn.recv(4096)
-        decoded_data = data_from_request.decode().split('\r\n')
-        request_data = {'Request line': decoded_data[0].split(' ')}
-        decoded_data.pop(0)
-        for request_content in decoded_data:
-            section = request_content.split(': ')
-            if section[0] != '':
-                request_data[section[0]] = section[1]
-        
-        print(request_data)
-        response = verify_endpoint(request_data)
-        conn.send(response.encode())
-        conn.close()
+        print("Connection from", addr)        
+        connection = threading.Thread(target=handle_request, args=(conn,))
+        connection.start()
 
 if __name__ == "__main__":
     main()
