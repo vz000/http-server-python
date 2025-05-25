@@ -28,22 +28,25 @@ def verify_endpoint(request_data):
 
 def main():
     print("Logs from your program will appear here!")
-
     server_socket = socket.create_server(("localhost", 4221))
-    conn, addr = server_socket.accept()
-    print(f'Connection from {addr}')
-    data_from_request = conn.recv(4096)
-    decoded_data = data_from_request.decode().split('\r\n')
-    request_data = {'Request line': decoded_data[0].split(' ')}
-    decoded_data.pop(0)
-    for request_content in decoded_data:
-        section = request_content.split(': ')
-        if section[0] != '':
-            request_data[section[0]] = section[1]
-    
-    print(request_data)
-    response = verify_endpoint(request_data)
-    conn.send(response.encode())
+    server_socket.listen()
+
+    while True:
+        conn, addr = server_socket.accept()
+        print(f'Connection from {addr}')
+        data_from_request = conn.recv(4096)
+        decoded_data = data_from_request.decode().split('\r\n')
+        request_data = {'Request line': decoded_data[0].split(' ')}
+        decoded_data.pop(0)
+        for request_content in decoded_data:
+            section = request_content.split(': ')
+            if section[0] != '':
+                request_data[section[0]] = section[1]
+        
+        print(request_data)
+        response = verify_endpoint(request_data)
+        conn.send(response.encode())
+        conn.close()
 
 if __name__ == "__main__":
     main()
